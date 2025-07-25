@@ -58,9 +58,6 @@ class NewsletterAgent:
         # 初始化提示模板
         self.prompts = self._init_prompts()
         
-        # 初始化代理执行器
-        self.agent_executor = self._init_agent_executor()
-        
         # 代理状态
         self.is_ready = self.llm is not None and len(self.tools) > 0
         
@@ -132,34 +129,6 @@ class NewsletterAgent:
             logger.error(f"提示模板初始化失败: {e}")
             return None
     
-    def _init_agent_executor(self) -> Optional[AgentExecutor]:
-        """初始化代理执行器"""
-        if not LANGCHAIN_AVAILABLE or not self.llm or not self.tools:
-            logger.warning("无法创建代理执行器，缺少必要组件")
-            return None
-        
-        try:
-            # 创建系统提示
-            system_prompt = self.prompts.get_system_prompt() if self.prompts else "你是一个新闻简报助手。"
-            
-            # 创建执行器
-            executor = initialize_agent(
-                tools=self.tools,
-                llm=self.llm,
-                agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-                verbose=True,
-                max_iterations=10,
-                max_execution_time=300,  # 5分钟超时
-                return_intermediate_steps=True
-            )
-            
-            logger.info("代理执行器创建成功")
-            return executor
-            
-        except Exception as e:
-            logger.error(f"代理执行器创建失败: {e}")
-            return None
-    
     def chat(self, message: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """与代理对话
         
@@ -189,36 +158,23 @@ class NewsletterAgent:
             # 构建完整的提示
             full_prompt = self._build_conversation_prompt(message, context)
             
-            # 执行代理
-            if self.agent_executor:
-                result = self.agent_executor.invoke({
-                    "input": full_prompt,
-                    "chat_history": self._get_recent_history()
-                })
-                
-                response_content = result.get("output", "抱歉，我无法生成回复。")
-                intermediate_steps = result.get("intermediate_steps", [])
-                
-            else:
-                # 降级模式：直接使用LLM
-                response = self.llm([HumanMessage(content=full_prompt)])
-                response_content = response.content
-                intermediate_steps = []
+            # 由于AgentExecutor不可用，直接使用LLM
+            response = self.llm.invoke([HumanMessage(content=full_prompt)])
+            response_content = response.content
             
             # 记录代理响应
             self.conversation_history.append({
                 "role": "assistant",
                 "content": response_content,
                 "timestamp": datetime.now().isoformat(),
-                "intermediate_steps": len(intermediate_steps)
+                "method": "direct_llm"
             })
             
             return {
                 "success": True,
                 "message": response_content,
-                "intermediate_steps": intermediate_steps,
                 "session_id": self.session_id,
-                "tools_used": self._extract_tools_used(intermediate_steps)
+                "method": "direct_llm"
             }
             
         except Exception as e:
@@ -381,22 +337,7 @@ class NewsletterAgent:
             elif item["role"] == "assistant":
                 history.append(f"Assistant: {item['content']}")
         
-        return history
-    
-    def _extract_tools_used(self, intermediate_steps: List) -> List[str]:
-        """提取使用的工具列表"""
-        tools_used = []
-        
-        for step in intermediate_steps:
-            if hasattr(step, 'tool') and hasattr(step.tool, 'name'):
-                tools_used.append(step.tool.name)
-            elif isinstance(step, tuple) and len(step) >= 2:
-                # 处理 (AgentAction, observation) 格式
-                action = step[0]
-                if hasattr(action, 'tool'):
-                    tools_used.append(action.tool)
-        
-        return list(set(tools_used))  # 去重
+        return history 
 
 
 def create_newsletter_agent(api_key: Optional[str] = None, 

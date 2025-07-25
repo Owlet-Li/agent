@@ -1,19 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Newsletter Agent - Gradio用户界面
-完整的Web界面，支持所有功能
+Newsletter Agent - 用户界面
+Gradio-based web interface
 """
 
-from typing import Tuple, List, Dict, Any, Optional
-import uuid
+import gradio as gr
+from typing import List, Tuple, Dict, Any
 from datetime import datetime
-
-try:
-    import gradio as gr
-    GRADIO_AVAILABLE = True
-except ImportError:
-    gr = None
-    GRADIO_AVAILABLE = False
 
 try:
     from loguru import logger
@@ -21,481 +14,365 @@ except ImportError:
     import logging
     logger = logging.getLogger(__name__)
 
+try:
+    from newsletter_agent.src.agents import get_global_agent, get_agent_status
+    from newsletter_agent.src.templates.newsletter_templates import NewsletterTemplateEngine
+    from newsletter_agent.src.user.preferences import UserPreferencesManager
+    from newsletter_agent.src.user.subscription import SubscriptionManager
+    from newsletter_agent.src.user.storage import UserDataStorage
+    from newsletter_agent.config.settings import settings
+except ImportError as e:
+    logger.error(f"模块导入失败: {e}")
+    # 创建模拟对象
+    get_global_agent = None
+    get_agent_status = None
+
 
 def create_app():
-    """创建主要的Gradio应用"""
-    if not GRADIO_AVAILABLE:
-        logger.error("Gradio不可用，无法创建Web界面")
-        return None
-    
+    """创建Gradio应用"""
     logger.info("创建Gradio应用界面...")
     
-    # 全局状态存储
-    app_state = {
-        'current_user_id': None,
-        'current_subscription_id': None,
-        'generated_newsletter': None
-    }
+    # 初始化组件
+    newsletter_engine = NewsletterTemplateEngine()
+    preferences_manager = UserPreferencesManager()
+    subscription_manager = SubscriptionManager()
+    storage = UserDataStorage()
     
     def generate_complete_newsletter(
         topic: str,
         style: str,
         length: str,
         audience: str,
-        email: str,
-        name: str,
-        frequency: str,
-        categories: List[str],
-        send_email: bool
+        categories: List[str]
     ) -> Tuple[str, str, str]:
-        """生成完整的新闻简报并可选择发送邮件"""
+        """生成完整的新闻简报"""
         try:
-            # 导入必要的模块
-            from newsletter_agent.src.agents import create_newsletter_agent
-            from newsletter_agent.src.templates import NewsletterTemplateEngine, EmailTemplateEngine
-            from newsletter_agent.src.user import UserPreferencesManager, SubscriptionManager
-            from newsletter_agent.src.email import SendGridEmailClient
-            
-            # 创建代理和服务
-            agent = create_newsletter_agent()
-            template_engine = NewsletterTemplateEngine()
-            email_engine = EmailTemplateEngine()
-            user_manager = UserPreferencesManager()
-            subscription_manager = SubscriptionManager()
-            sendgrid_client = SendGridEmailClient()
-            
-            # 1. 生成简报内容
             logger.info(f"开始生成简报: {topic}")
             
-            # 使用代理研究主题
-            research_result = agent.research_topic(topic, depth="medium")
-            logger.info("主题研究完成")
-            
-            # 生成最终简报
-            newsletter_result = agent.generate_newsletter(
-                topic=topic,
-                style=style,
-                audience=audience,
-                length=length
-            )
-            logger.info("简报生成完成")
-            
-            # 2. 用户和订阅管理
-            user_id = str(uuid.uuid4())
-            status_msg = f"✅ 简报生成成功！主题：{topic}\n"
-            
-            if email and name:
-                # 创建用户偏好
-                user_prefs = user_manager.create_user_preferences(
-                    user_id=user_id,
-                    email=email,
-                    name=name,
-                    topics=[topic],
-                    categories=categories or ["general"],
-                    content_style=style,
-                    content_length=length,
-                    frequency=frequency
-                )
+            # 获取代理
+            if get_global_agent:
+                agent = get_global_agent()
                 
-                # 创建订阅
-                subscription = subscription_manager.create_subscription(
-                    user_id=user_id,
-                    email=email,
-                    name=name,
-                    frequency=frequency
-                )
+                # 执行主题研究
+                research_prompt = f"请研究主题'{topic}'，收集相关信息和最新动态"
+                research_result = agent.chat(research_prompt)
+                logger.info("主题研究完成")
                 
-                app_state['current_user_id'] = user_id
-                app_state['current_subscription_id'] = subscription.subscription_id
-                
-                status_msg += f"✅ 用户创建成功：{name} ({email})\n"
-                status_msg += f"✅ 订阅创建成功：{frequency}频率\n"
-                
-                # 3. 发送邮件
-                if send_email:
-                    try:
-                        # 生成HTML简报
-                        newsletter_data = template_engine.create_newsletter_data(
-                            title=f"{topic} - 新闻简报",
-                            subtitle=f"为您精心策划的{topic}相关内容",
-                            content_sections=[{
-                                'title': '主要内容',
-                                'articles': [{'title': topic, 'content': newsletter_result[:500]}],
-                                'category': 'general'
-                            }],
-                            user_preferences=user_prefs.to_dict()
-                        )
-                        
-                        html_content = template_engine.generate_newsletter(
-                            newsletter_data, 
-                            template_style=style,
-                            output_format="html"
-                        )
-                        
-                        # 发送邮件
-                        unsubscribe_url = f"http://localhost:7860/unsubscribe?id={subscription.subscription_id}"
-                        preferences_url = f"http://localhost:7860/preferences?id={subscription.subscription_id}"
-                        
-                        email_result = sendgrid_client.send_newsletter(
-                            to_email=email,
-                            subject=f"📰 {topic} - Newsletter Agent",
-                            html_content=html_content,
-                            subscriber_name=name,
-                            unsubscribe_url=unsubscribe_url,
-                            preferences_url=preferences_url
-                        )
-                        
-                        if email_result['success']:
-                            status_msg += f"✅ 邮件发送成功到：{email}\n"
-                            status_msg += f"📧 邮件ID：{email_result.get('message_id', 'N/A')}\n"
-                        else:
-                            status_msg += f"❌ 邮件发送失败：{email_result.get('error', '未知错误')}\n"
-                            
-                    except Exception as e:
-                        logger.error(f"邮件发送失败: {e}")
-                        status_msg += f"❌ 邮件发送失败：{str(e)}\n"
-            
-            # 4. 保存到全局状态
-            app_state['generated_newsletter'] = {
-                'topic': topic,
-                'content': newsletter_result,
-                'research': research_result,
-                'generated_at': datetime.now().isoformat(),
-                'user_id': user_id if email else None
-            }
-            
-            # 格式化显示内容
-            display_content = f"""
-# 📰 {topic} - 新闻简报
+                # 生成简报
+                newsletter_prompt = f"""
+基于以下研究内容，生成一份{style}风格的{length}长度新闻简报：
 
-**生成时间**: {datetime.now().strftime('%Y年%m月%d日 %H:%M')}
-**风格**: {style} | **长度**: {length} | **受众**: {audience}
+主题：{topic}
+目标受众：{audience}
+关注分类：{', '.join(categories) if categories else '综合'}
 
----
+研究内容：
+{research_result.get('message', '暂无研究内容')}
 
-## 🔍 主题研究
-
-{research_result[:800]}...
-
----
-
-## 📰 完整简报
-
-{newsletter_result}
-
----
-
-**🤖 由 Newsletter Agent 智能生成**
+请生成结构化的新闻简报，包含：
+1. 标题
+2. 摘要
+3. 主要内容
+4. 关键洞察
+5. 结论
 """
-            
-            return display_content, status_msg, "简报生成并处理完成！"
-            
-        except Exception as e:
-            error_msg = f"❌ 生成失败：{str(e)}"
-            logger.error(f"简报生成失败: {e}")
-            return f"## ❌ 生成失败\n\n错误信息：{str(e)}", error_msg, "生成失败"
-    
-    def manage_subscription(email: str, action: str, new_frequency: str = "daily") -> str:
-        """管理订阅"""
-        try:
-            from newsletter_agent.src.user import SubscriptionManager
-            subscription_manager = SubscriptionManager()
-            
-            if action == "查看订阅":
-                subscription = subscription_manager.get_subscription_by_email(email)
-                if subscription:
-                    return f"""
-## 📧 订阅信息
+                
+                newsletter_result = agent.chat(newsletter_prompt)
+                logger.info("简报生成完成")
+                
+                if newsletter_result.get('success'):
+                    newsletter_content = newsletter_result['message']
+                    
+                    # 格式化为HTML
+                    html_newsletter_content = newsletter_content.replace('\n', '<br>')
+                    html_content = f"""
+                    <div class="newsletter">
+                        <h1>📰 智能新闻简报</h1>
+                        <div class="metadata">
+                            <p><strong>主题:</strong> {topic}</p>
+                            <p><strong>风格:</strong> {style}</p>
+                            <p><strong>生成时间:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+                        </div>
+                        <div class="content">
+                            {html_newsletter_content}
+                        </div>
+                    </div>
+                    """
+                    
+                    # 生成Markdown格式
+                    markdown_content = f"""# 📰 智能新闻简报
 
-**邮箱**: {subscription.email}
-**姓名**: {subscription.name}
-**状态**: {subscription.subscription_status}
-**频率**: {subscription.frequency}
-**创建时间**: {subscription.created_at.strftime('%Y-%m-%d %H:%M') if subscription.created_at else 'N/A'}
-**下次发送**: {subscription.next_send_at.strftime('%Y-%m-%d %H:%M') if subscription.next_send_at else 'N/A'}
-**已发送**: {subscription.total_sent} 封邮件
+**主题:** {topic}  
+**风格:** {style}  
+**生成时间:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+---
+
+{newsletter_content}
+
+---
+*本简报由Newsletter Agent自动生成*
 """
+                    
+                    success_msg = f"✅ 简报生成成功！主题：{topic}"
+                    
+                    return success_msg, html_content, markdown_content
                 else:
-                    return "❌ 未找到该邮箱的订阅信息"
+                    error_msg = f"❌ 简报生成失败：{newsletter_result.get('error', '未知错误')}"
+                    return error_msg, "", ""
             
-            elif action == "取消订阅":
-                if subscription_manager.cancel_subscription_by_email(email, "用户主动取消"):
-                    return f"✅ 已成功取消 {email} 的订阅"
-                else:
-                    return f"❌ 取消订阅失败，邮箱 {email} 可能不存在订阅"
-            
-            elif action == "更新频率":
-                subscription = subscription_manager.get_subscription_by_email(email)
-                if subscription:
-                    subscription_manager.update_subscription(
-                        subscription.subscription_id,
-                        {'frequency': new_frequency}
-                    )
-                    return f"✅ 已将 {email} 的订阅频率更新为 {new_frequency}"
-                else:
-                    return f"❌ 未找到邮箱 {email} 的订阅"
-            
-            return "❌ 未知的操作"
-            
-        except Exception as e:
-            return f"❌ 操作失败：{str(e)}"
-    
-    def test_email_service() -> str:
-        """测试邮件服务"""
-        try:
-            from newsletter_agent.src.email import SendGridEmailClient
-            sendgrid_client = SendGridEmailClient()
-            
-            # 验证配置
-            config_result = sendgrid_client.validate_configuration()
-            
-            result = "## 📧 SendGrid 邮件服务状态\n\n"
-            
-            if config_result['is_configured']:
-                result += "✅ **配置状态**: 已正确配置\n"
-                result += f"📮 **发送邮箱**: {config_result['from_email']}\n"
-                result += f"🔑 **API密钥**: {'已配置' if config_result['api_key_present'] else '未配置'}\n"
-                result += f"📚 **SendGrid库**: {'已安装' if config_result['sendgrid_available'] else '未安装'}\n"
             else:
-                result += "❌ **配置状态**: 配置不完整\n"
-                result += "**问题列表**:\n"
-                for issue in config_result['issues']:
-                    result += f"- {issue}\n"
-            
-            return result
-            
+                # 降级模式 - 生成示例简报
+                current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                example_content = f"""
+# {topic} - 智能新闻简报
+
+## 📋 概要
+本期简报聚焦于{topic}领域的最新发展和重要动态。
+
+## 🔍 主要发现
+
+### 技术进展
+- {topic}技术不断突破创新
+- 新的应用场景持续涌现
+- 行业标准逐步完善
+
+### 市场动态
+- 相关市场规模快速增长
+- 投资热度持续升温
+- 竞争格局日趋激烈
+
+### 政策环境
+- 监管政策逐步明确
+- 支持措施不断出台
+- 国际合作加强
+
+## 💡 关键洞察
+{topic}作为新兴领域，正在深刻改变相关行业的发展模式。企业需要密切关注技术发展趋势，抢占市场先机。
+
+## 🔮 未来展望
+预计在未来一段时间内，{topic}将继续保持快速发展势头，相关技术应用将更加成熟。
+
+---
+*本简报由Newsletter Agent生成 | {current_time}*
+"""
+                
+                html_example_content = example_content.replace('\n', '<br>')
+                html_content = f"""
+                <div class="newsletter">
+                    <h1>📰 智能新闻简报</h1>
+                    <div class="metadata">
+                        <p><strong>主题:</strong> {topic}</p>
+                        <p><strong>风格:</strong> {style}</p>
+                        <p><strong>生成时间:</strong> {current_time}</p>
+                    </div>
+                    <div class="content">
+                        {html_example_content}
+                    </div>
+                </div>
+                """
+                
+                success_msg = f"✅ 简报生成成功！主题：{topic} (示例模式)"
+                return success_msg, html_content, example_content
+                
         except Exception as e:
-            return f"❌ 测试失败：{str(e)}"
+            logger.error(f"简报生成失败: {e}")
+            error_msg = f"❌ 简报生成失败：{str(e)}"
+            return error_msg, "", ""
     
     def get_system_status() -> str:
         """获取系统状态"""
         try:
-            from newsletter_agent.src.agents import create_newsletter_agent
-            from newsletter_agent.src.data_sources import data_aggregator
-            from newsletter_agent.src.user import SubscriptionManager
+            status_info = []
             
-            # 创建代理测试
-            agent = create_newsletter_agent()
-            agent_status = agent.get_agent_status()
+            # 代理状态
+            if get_agent_status:
+                agent_status = get_agent_status()
+                if agent_status.get('is_ready'):
+                    status_info.append("✅ AI代理: 已就绪")
+                    status_info.append(f"   - 可用工具: {agent_status.get('tools_count', 0)} 个")
+                    status_info.append(f"   - 语言模型: {'可用' if agent_status.get('llm_available') else '不可用'}")
+                else:
+                    status_info.append("❌ AI代理: 未就绪")
+            else:
+                status_info.append("❌ AI代理: 未初始化")
             
-            # 订阅统计
-            subscription_manager = SubscriptionManager()
-            sub_stats = subscription_manager.get_subscription_statistics()
+            # 数据源状态
+            try:
+                from newsletter_agent.src.data_sources.aggregator import data_aggregator
+                data_status = data_aggregator.get_data_sources_status()
+                status_info.append("\n📡 数据源状态:")
+                for source, info in data_status.items():
+                    if info.get('available'):
+                        status_info.append(f"   ✅ {source.upper()}: 可用")
+                    else:
+                        status_info.append(f"   ❌ {source.upper()}: 不可用")
+            except Exception as e:
+                status_info.append(f"❌ 数据源: 检查失败 ({e})")
             
-            status = f"""
-## 🏠 Newsletter Agent 系统状态
-
-### 🤖 智能代理状态
-- **名称**: {agent_status.get('agent_name', 'N/A')}
-- **就绪状态**: {'✅ 就绪' if agent_status.get('is_ready') else '❌ 未就绪'}
-- **LLM可用**: {'✅ 可用' if agent_status.get('llm_available') else '❌ 不可用'}
-- **工具数量**: {agent_status.get('tools_count', 0)} 个
-- **LangChain**: {'✅ 可用' if agent_status.get('langchain_available') else '❌ 不可用'}
-
-### 📊 订阅统计
-- **总订阅数**: {sub_stats.get('total_subscriptions', 0)}
-- **活跃订阅**: {sub_stats.get('active_subscriptions', 0)}
-- **已取消**: {sub_stats.get('cancelled_subscriptions', 0)}
-- **待发送**: {sub_stats.get('pending_count', 0)}
-
-### 📡 数据源状态
-- **NewsAPI**: {'✅ 可用' if hasattr(data_aggregator, 'news_client') else '❌ 不可用'}
-- **Reddit API**: {'✅ 可用' if hasattr(data_aggregator, 'reddit_client') else '❌ 不可用'}
-- **RSS解析**: {'✅ 可用' if hasattr(data_aggregator, 'rss_parser') else '❌ 不可用'}
-
-### 📧 邮件服务
-{test_email_service()}
-
-**最后更新**: {datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')}
-"""
-            return status
+            # 系统配置
+            status_info.append("\n⚙️ 系统配置:")
+            status_info.append(f"   - 应用版本: {settings.APP_VERSION}")
+            status_info.append(f"   - 调试模式: {'开启' if settings.DEBUG else '关闭'}")
+            status_info.append(f"   - 内容语言: {settings.CONTENT_LANGUAGE}")
+            
+            return "\n".join(status_info)
             
         except Exception as e:
-            return f"❌ 获取系统状态失败：{str(e)}"
+            return f"❌ 获取系统状态失败: {str(e)}"
     
-    # 创建Gradio界面
+    # 创建界面
     with gr.Blocks(
-        title="📰 Newsletter Agent - 智能新闻简报生成系统",
-        theme=gr.themes.Soft()
+        title="Newsletter Agent - 智能新闻简报生成器",
+        theme=gr.themes.Soft(),
+        css="""
+        .newsletter {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .metadata {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #007bff;
+        }
+        .content {
+            line-height: 1.6;
+            color: #333;
+        }
+        """
     ) as app:
         
-        # 标题和介绍
-        gr.HTML("""
-        <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; margin-bottom: 20px;">
-            <h1>📰 Newsletter Agent</h1>
-            <p style="font-size: 1.2em; margin: 10px 0;">智能新闻简报生成系统</p>
-            <p>🤖 AI驱动 | 📧 邮件发送 | 🎯 个性化定制 | 🔄 多源聚合</p>
-        </div>
-        """)
+        gr.Markdown("# 📰 Newsletter Agent - 智能新闻简报生成器")
+        gr.Markdown("利用AI技术，自动生成个性化新闻简报")
         
         with gr.Tabs():
-            # Tab 1: 简报生成
-            with gr.Tab("📰 生成简报"):
-                gr.Markdown("## 🎯 智能简报生成")
-                
+            # 简报生成标签页
+            with gr.TabItem("🚀 生成简报"):
                 with gr.Row():
-                    with gr.Column(scale=2):
+                    with gr.Column(scale=1):
                         topic_input = gr.Textbox(
                             label="📝 简报主题",
-                            placeholder="例如：人工智能发展趋势、区块链技术、健康生活...",
+                            placeholder="例如：人工智能最新发展、新能源汽车市场动态...",
                             value="人工智能最新发展"
                         )
                         
-                        with gr.Row():
-                            style_dropdown = gr.Dropdown(
-                                label="🎨 写作风格",
-                                choices=["professional", "casual", "academic", "creative"],
-                                value="professional"
-                            )
-                            length_dropdown = gr.Dropdown(
-                                label="📏 内容长度",
-                                choices=["short", "medium", "long"],
-                                value="medium"
-                            )
+                        style_select = gr.Dropdown(
+                            label="✍️ 写作风格",
+                            choices=["professional", "casual", "academic", "creative"],
+                            value="professional"
+                        )
                         
-                        audience_dropdown = gr.Dropdown(
+                        length_select = gr.Dropdown(
+                            label="📄 内容长度",
+                            choices=["short", "medium", "long"],
+                            value="medium"
+                        )
+                        
+                        audience_select = gr.Dropdown(
                             label="👥 目标受众",
                             choices=["general", "tech", "business", "academic"],
                             value="general"
                         )
                         
-                        categories_checkboxes = gr.CheckboxGroup(
-                            label="🏷️ 内容分类",
-                            choices=["tech", "business", "science", "health", "world", "entertainment"],
-                            value=["tech", "business"]
+                        categories_select = gr.CheckboxGroup(
+                            label="🏷️ 关注分类",
+                            choices=["科技", "商业", "健康", "娱乐", "体育", "政治", "教育"],
+                            value=["科技", "商业"]
                         )
-                
-                with gr.Column(scale=1):
-                    gr.Markdown("### 📧 邮件发送设置")
+                        
+                        generate_btn = gr.Button("🎯 生成简报", variant="primary", size="lg")
                     
-                    email_input = gr.Textbox(
-                        label="📮 邮箱地址",
-                        placeholder="your@email.com"
-                    )
-                    name_input = gr.Textbox(
-                        label="👤 姓名",
-                        placeholder="您的姓名"
-                    )
-                    frequency_dropdown = gr.Dropdown(
-                        label="⏰ 发送频率",
-                        choices=["daily", "weekly", "bi-weekly", "monthly"],
-                        value="daily"
-                    )
-                    send_email_checkbox = gr.Checkbox(
-                        label="📤 立即发送邮件",
-                        value=False
-                    )
+                    with gr.Column(scale=2):
+                        status_output = gr.Textbox(
+                            label="📊 生成状态",
+                            value="等待生成...",
+                            interactive=False
+                        )
+                        
+                        with gr.Tabs():
+                            with gr.TabItem("🌐 HTML预览"):
+                                html_output = gr.HTML(label="HTML格式")
+                            
+                            with gr.TabItem("📝 Markdown"):
+                                markdown_output = gr.Textbox(
+                                    label="Markdown格式",
+                                    lines=20,
+                                    max_lines=30
+                                )
                 
-                generate_btn = gr.Button(
-                    "🚀 生成智能简报",
-                    variant="primary",
-                    size="lg"
-                )
-                
-                # 输出区域
-                with gr.Row():
-                    newsletter_output = gr.Markdown(
-                        label="📄 生成的简报",
-                        value="点击上方按钮开始生成简报..."
-                    )
-                
-                with gr.Row():
-                    status_output = gr.Textbox(
-                        label="📊 处理状态",
-                        lines=5,
-                        value="等待开始..."
-                    )
-                    result_output = gr.Textbox(
-                        label="✅ 操作结果",
-                        value="未开始"
-                    )
-                
-                # 绑定生成函数
+                # 绑定事件
                 generate_btn.click(
                     fn=generate_complete_newsletter,
                     inputs=[
-                        topic_input, style_dropdown, length_dropdown, 
-                        audience_dropdown, email_input, name_input, 
-                        frequency_dropdown, categories_checkboxes, send_email_checkbox
+                        topic_input,
+                        style_select,
+                        length_select,
+                        audience_select,
+                        categories_select
                     ],
-                    outputs=[newsletter_output, status_output, result_output]
+                    outputs=[status_output, html_output, markdown_output]
                 )
             
-            # Tab 2: 订阅管理
-            with gr.Tab("📧 订阅管理"):
-                gr.Markdown("## 📋 订阅和用户管理")
-                
+            # 系统状态标签页
+            with gr.TabItem("⚙️ 系统状态"):
                 with gr.Row():
-                    email_manage_input = gr.Textbox(
-                        label="📮 邮箱地址",
-                        placeholder="要管理的邮箱地址"
-                    )
-                    action_dropdown = gr.Dropdown(
-                        label="🔧 操作类型",
-                        choices=["查看订阅", "取消订阅", "更新频率"],
-                        value="查看订阅"
-                    )
-                    new_frequency_dropdown = gr.Dropdown(
-                        label="⏰ 新频率 (仅更新时使用)",
-                        choices=["daily", "weekly", "bi-weekly", "monthly"],
-                        value="daily"
-                    )
+                    with gr.Column():
+                        status_btn = gr.Button("🔍 检查系统状态", variant="secondary")
+                        system_status_output = gr.Textbox(
+                            label="系统状态信息",
+                            lines=15,
+                            value="点击按钮检查系统状态..."
+                        )
                 
-                manage_btn = gr.Button("🔧 执行操作", variant="primary")
-                
-                subscription_output = gr.Markdown(
-                    label="📊 操作结果",
-                    value="选择操作后点击执行..."
-                )
-                
-                # 绑定管理函数
-                manage_btn.click(
-                    fn=manage_subscription,
-                    inputs=[email_manage_input, action_dropdown, new_frequency_dropdown],
-                    outputs=[subscription_output]
+                status_btn.click(
+                    fn=get_system_status,
+                    outputs=system_status_output
                 )
             
-            # Tab 3: 系统状态
-            with gr.Tab("🏠 系统状态"):
-                gr.Markdown("## 📊 系统监控和状态")
+            # 使用指南标签页
+            with gr.TabItem("📖 使用指南"):
+                gr.Markdown("""
+                ## 🎯 使用步骤
                 
-                status_refresh_btn = gr.Button("🔄 刷新状态", variant="secondary")
+                1. **选择主题** - 在"简报主题"中输入您感兴趣的话题
+                2. **设置偏好** - 选择写作风格、内容长度和目标受众
+                3. **选择分类** - 勾选您关注的内容分类
+                4. **生成简报** - 点击"生成简报"按钮开始创建
+                5. **查看结果** - 在HTML预览或Markdown标签页中查看生成的简报
                 
-                system_status_output = gr.Markdown(
-                    label="📈 系统状态",
-                    value="点击刷新获取最新状态..."
-                )
+                ## 🔧 功能特点
                 
-                # 绑定状态函数
-                status_refresh_btn.click(
-                    fn=get_system_status,
-                    outputs=[system_status_output]
-                )
+                - ✅ **智能生成** - 基于AI技术自动生成个性化简报
+                - ✅ **多种风格** - 支持专业、休闲、学术、创意等多种写作风格  
+                - ✅ **内容定制** - 可调节内容长度和目标受众
+                - ✅ **多格式输出** - 支持HTML和Markdown格式输出
+                - ✅ **实时生成** - 快速响应，即时获得结果
                 
-                # 自动加载初始状态
-                app.load(
-                    fn=get_system_status,
-                    outputs=[system_status_output]
-                )
+                ## 💡 使用技巧
+                
+                - **主题建议**: 使用具体明确的主题描述，如"人工智能在医疗领域的应用"
+                - **风格选择**: 根据阅读对象选择合适的风格
+                - **分类筛选**: 选择相关分类有助于生成更精准的内容
+                
+                ## 🚀 开始使用
+                
+                现在就切换到"生成简报"标签页，开始创建您的第一份智能新闻简报吧！
+                """)
         
-        # 底部信息
-        gr.HTML("""
-        <div style="text-align: center; margin-top: 30px; padding: 15px; background: #f8f9fa; border-radius: 5px; font-size: 0.9em; color: #666;">
-            <p><strong>🤖 Newsletter Agent v1.0.0</strong></p>
-            <p>数据来源: NewsAPI, Reddit, RSS Feeds | AI驱动: OpenRouter | 邮件服务: SendGrid</p>
-            <p>💻 LangChain + 🎨 Gradio + 📊 多源数据聚合 + 🤖 智能内容生成</p>
-        </div>
-        """)
+        gr.Markdown("---")
+        gr.Markdown("*Powered by Newsletter Agent | AI-Driven Newsletter Generation*")
     
     return app
 
 
 def create_main_interface():
-    """创建主界面的包装函数"""
-    if not GRADIO_AVAILABLE:
-        logger.error("Gradio不可用，无法创建界面")
-        return None
-    
+    """创建主界面 - 兼容性函数"""
     return create_app()
 
 
