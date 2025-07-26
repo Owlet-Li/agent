@@ -27,8 +27,8 @@ try:
     from newsletter_agent.config.settings import settings
 except ImportError:
     class MockSettings:
-        OPENAI_API_KEY = "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"
-        OPENAI_API_BASE = "https://openrouter.ai/api/v1/chat/completions"
+        OPENAI_API_KEY = "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"
+        OPENAI_API_BASE = "https://openrouter.ai/api/v1"
     settings = MockSettings()
 
 

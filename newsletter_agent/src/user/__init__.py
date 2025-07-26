@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Newsletter Agent - 用户管理系统
-用户偏好、订阅管理、个性化设置
+Newsletter Agent - User Management System
+User preferences, subscription management, personalization settings
 """
 
 from .preferences import UserPreferencesManager, UserPreferences
@@ -19,4 +19,4 @@ __all__ = [
 # 全局实例
 user_preferences_manager = UserPreferencesManager()
 subscription_manager = SubscriptionManager()
-user_storage = UserDataStorage() 
+user_storage = UserDataStorage()

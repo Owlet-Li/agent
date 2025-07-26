@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Newsletter Agent - 代理提示模板
-定义AI代理的行为、决策逻辑和交互模式
+Newsletter Agent - Agent Prompt Templates
+Defines AI agent behavior, decision logic and interaction patterns
 """
 
 from typing import Dict, List, Any, Optional
@@ -26,249 +26,249 @@ except ImportError:
 
 
 class NewsletterAgentPrompts:
-    """新闻简报代理提示模板集合"""
+    """Newsletter agent prompt template collection"""
     
     def __init__(self):
-        """初始化提示模板"""
-        self.current_date = datetime.now().strftime("%Y年%m月%d日")
+        """Initialize prompt templates"""
+        self.current_date = datetime.now().strftime("%Y-%m-%d")
         self.agent_name = "Newsletter Agent"
         
     def get_system_prompt(self) -> str:
-        """获取系统级提示"""
-        return f"""你是 {self.agent_name}，一个专业的新闻简报生成助手。今天是{self.current_date}。
+        """Get system-level prompt"""
+        return f"""You are {self.agent_name}, a professional newsletter generation assistant. Today is {self.current_date}.
 
-你的核心能力包括：
-1. 🔍 新闻搜索和信息收集
-2. 📊 内容分析和质量评估  
-3. 📝 智能摘要和分类
-4. 🎯 个性化简报生成
-5. 🤖 多步骤推理和决策
+Your core capabilities include:
+1. 🔍 News search and information gathering
+2. 📊 Content analysis and quality assessment  
+3. 📝 Intelligent summarization and categorization
+4. 🎯 Personalized newsletter generation
+5. 🤖 Multi-step reasoning and decision making
 
-你可以使用以下工具：
-- news_search: 搜索最新新闻内容
-- trending_topics: 获取热门话题
-- content_analysis: 分析文本内容
-- topic_research: 深度主题研究
-- newsletter_generation: 生成个性化简报
-- content_summary: 生成内容摘要
-- headline_generation: 生成吸引人的标题
-- content_enhancement: 改进现有内容
+You can use the following tools:
+- news_search: Search for latest news content
+- trending_topics: Get trending topics
+- content_analysis: Analyze text content
+- topic_research: In-depth topic research
+- newsletter_generation: Generate personalized newsletters
+- content_summary: Generate content summaries
+- headline_generation: Generate compelling headlines
+- content_enhancement: Improve existing content
 
-工作原则：
-1. 始终以用户需求为导向
-2. 确保信息准确性和时效性
-3. 提供有价值的洞察和分析
-4. 保持客观中立的立场
-5. 生成高质量、有吸引力的内容
+Working principles:
+1. Always prioritize user needs
+2. Ensure information accuracy and timeliness
+3. Provide valuable insights and analysis
+4. Maintain objective and neutral stance
+5. Generate high-quality, engaging content
 
-在执行任务时，请按照以下流程：
-1. 理解用户需求和偏好
-2. 制定信息收集策略
-3. 使用适当的工具收集和分析信息
-4. 整合信息并生成结构化内容
-5. 根据反馈优化输出
+When executing tasks, please follow this workflow:
+1. Understand user needs and preferences
+2. Develop information gathering strategy
+3. Use appropriate tools to collect and analyze information
+4. Integrate information and generate structured content
+5. Optimize output based on feedback
 
-请始终以专业、友好、高效的方式与用户互动。"""
+Please always interact with users in a professional, friendly, and efficient manner."""
 
     def get_task_planning_prompt(self) -> str:
-        """获取任务规划提示"""
-        return """作为Newsletter Agent，当用户提出需求时，请按以下步骤进行任务规划：
+        """Get task planning prompt"""
+        return """As Newsletter Agent, when users present requirements, please follow these steps for task planning:
 
-1. **需求分析**
-   - 明确用户的具体需求
-   - 识别目标受众和内容偏好
-   - 确定简报的范围和深度
+1. **Requirement Analysis**
+   - Clarify user's specific needs
+   - Identify target audience and content preferences
+   - Determine newsletter scope and depth
 
-2. **信息收集策略**
-   - 确定需要搜索的主题和关键词
-   - 选择合适的数据源和工具
-   - 设定搜索的广度和深度
+2. **Information Gathering Strategy**
+   - Determine topics and keywords to search
+   - Select appropriate data sources and tools
+   - Set search breadth and depth
 
-3. **执行计划**
-   - 制定详细的执行步骤
-   - 估算所需时间和资源
-   - 确定输出格式和结构
+3. **Execution Plan**
+   - Develop detailed execution steps
+   - Estimate required time and resources
+   - Determine output format and structure
 
-4. **质量控制**
-   - 设定内容质量标准
-   - 规划信息验证流程
-   - 准备用户反馈机制
+4. **Quality Control**
+   - Set content quality standards
+   - Plan information verification process
+   - Prepare user feedback mechanisms
 
-请在开始执行前，简要说明你的规划，然后开始逐步执行。"""
+Please briefly explain your planning before starting execution, then begin step-by-step execution."""
 
     def get_research_prompt(self, topic: str, depth: str = "medium") -> str:
-        """获取研究任务提示"""
+        """Get research task prompt"""
         depth_descriptions = {
-            "light": "快速浏览，获取基本信息和要点",
-            "medium": "中等深度研究，包含关键信息和一些分析",
-            "deep": "深度研究，全面分析，包含背景、影响和展望"
+            "light": "Quick overview, get basic information and key points",
+            "medium": "Medium-depth research, including key information and some analysis",
+            "deep": "Deep research, comprehensive analysis, including background, impact and outlook"
         }
         
-        return f"""请对主题"{topic}"进行{depth_descriptions.get(depth, "中等深度")}研究。
+        return f"""Please conduct {depth_descriptions.get(depth, "medium-depth")} research on topic "{topic}".
 
-研究要求：
-1. 使用topic_research工具收集基础信息
-2. 分析收集到的信息质量和相关性
-3. 识别关键趋势和重要发现
-4. 总结核心观点和洞察
+Research requirements:
+1. Use topic_research tool to collect basic information
+2. Analyze quality and relevance of collected information
+3. Identify key trends and important findings
+4. Summarize core viewpoints and insights
 
-研究深度：{depth}
-- {depth_descriptions.get(depth, "中等深度研究")}
+Research depth: {depth}
+- {depth_descriptions.get(depth, "Medium-depth research")}
 
-请开始研究并提供详细的发现报告。"""
+Please start research and provide detailed findings report."""
 
     def get_newsletter_generation_prompt(self, 
                                        topic: str, 
                                        style: str = "professional",
                                        audience: str = "general",
                                        length: str = "medium") -> str:
-        """获取简报生成提示"""
-        return f"""基于之前的研究结果，请生成关于"{topic}"的新闻简报。
+        """Get newsletter generation prompt"""
+        return f"""Based on previous research results, please generate a newsletter about "{topic}".
 
-简报要求：
-- 主题：{topic}
-- 风格：{style}
-- 受众：{audience} 
-- 长度：{length}
+Newsletter requirements:
+- Topic: {topic}
+- Style: {style}
+- Audience: {audience} 
+- Length: {length}
 
-生成流程：
-1. 首先使用headline_generation工具生成吸引人的标题
-2. 使用content_summary工具为关键信息生成摘要
-3. 使用newsletter_generation工具生成完整简报
-4. 必要时使用content_enhancement工具优化内容质量
+Generation workflow:
+1. First use headline_generation tool to generate compelling headlines
+2. Use content_summary tool to generate summaries for key information
+3. Use newsletter_generation tool to generate complete newsletter
+4. Use content_enhancement tool to optimize content quality if necessary
 
-请确保简报内容：
-- 结构清晰，逻辑连贯
-- 信息准确，观点平衡
-- 语言流畅，易于阅读
-- 突出重点，有价值洞察
+Please ensure newsletter content:
+- Clear structure, logical coherence
+- Accurate information, balanced viewpoints
+- Fluent language, easy to read
+- Highlight key points, valuable insights
 
-开始生成简报。"""
+Start generating newsletter."""
 
     def get_content_analysis_prompt(self, content: str) -> str:
-        """获取内容分析提示"""
-        return f"""请对以下内容进行全面分析：
+        """Get content analysis prompt"""
+        return f"""Please conduct comprehensive analysis of the following content:
 
-内容：
+Content:
 {content[:500]}...
 
-分析要求：
-1. 使用content_analysis工具进行基础分析
-2. 评估内容质量和可信度
-3. 识别关键信息和观点
-4. 分析潜在影响和意义
-5. 提供改进建议
+Analysis requirements:
+1. Use content_analysis tool for basic analysis
+2. Assess content quality and credibility
+3. Identify key information and viewpoints
+4. Analyze potential impact and significance
+5. Provide improvement suggestions
 
-请提供详细的分析报告。"""
+Please provide detailed analysis report."""
 
     def get_trending_analysis_prompt(self, category: str = "all") -> str:
-        """获取热点分析提示"""
-        return f"""请分析当前的热门话题和趋势。
+        """Get trending analysis prompt"""
+        return f"""Please analyze current trending topics and trends.
 
-分析范围：{category}
+Analysis scope: {category}
 
-分析步骤：
-1. 使用trending_topics工具获取热门话题
-2. 分析话题的重要性和影响力
-3. 识别潜在的新闻价值
-4. 评估话题的持续性和发展趋势
-5. 推荐最值得关注的话题
+Analysis steps:
+1. Use trending_topics tool to get trending topics
+2. Analyze topic importance and influence
+3. Identify potential news value
+4. Assess topic sustainability and development trends
+5. Recommend most noteworthy topics
 
-请提供热点分析报告和话题推荐。"""
+Please provide trending analysis report and topic recommendations."""
 
     def get_error_handling_prompt(self, error_type: str, context: str) -> str:
-        """获取错误处理提示"""
+        """Get error handling prompt"""
         error_prompts = {
-            "tool_failure": "工具执行失败，请尝试其他方法或工具",
-            "no_results": "未找到相关信息，请调整搜索策略",
-            "api_error": "API服务暂时不可用，请使用备用方案",
-            "content_quality": "内容质量不符合要求，请重新生成或优化"
+            "tool_failure": "Tool execution failed, please try other methods or tools",
+            "no_results": "No relevant information found, please adjust search strategy",
+            "api_error": "API service temporarily unavailable, please use backup plan",
+            "content_quality": "Content quality does not meet requirements, please regenerate or optimize"
         }
         
-        base_prompt = error_prompts.get(error_type, "遇到未知错误，请分析并采取相应措施")
+        base_prompt = error_prompts.get(error_type, "Unknown error encountered, please analyze and take appropriate measures")
         
-        return f"""执行过程中遇到问题：{base_prompt}
+        return f"""Problem encountered during execution: {base_prompt}
 
-上下文：{context}
+Context: {context}
 
-请采取以下措施：
-1. 分析问题原因
-2. 评估可用的替代方案
-3. 选择最佳的解决策略
-4. 继续完成任务目标
-5. 向用户说明情况（如必要）
+Please take the following measures:
+1. Analyze problem causes
+2. Assess available alternative solutions
+3. Select best resolution strategy
+4. Continue to complete task objectives
+5. Inform user of situation (if necessary)
 
-请继续处理并报告进展。"""
+Please continue processing and report progress."""
 
     def get_user_interaction_prompt(self, interaction_type: str) -> str:
-        """获取用户交互提示"""
+        """Get user interaction prompt"""
         interaction_prompts = {
-            "clarification": "需要用户澄清需求或提供更多信息",
-            "options": "为用户提供多个选项供选择",
-            "feedback": "收集用户对输出结果的反馈",
-            "confirmation": "确认是否继续执行或调整策略"
+            "clarification": "Need user to clarify requirements or provide more information",
+            "options": "Provide multiple options for user to choose from",
+            "feedback": "Collect user feedback on output results",
+            "confirmation": "Confirm whether to continue execution or adjust strategy"
         }
         
-        return f"""与用户交互：{interaction_prompts.get(interaction_type, '一般性交互')}
+        return f"""User interaction: {interaction_prompts.get(interaction_type, 'General interaction')}
 
-交互原则：
-1. 保持友好和专业的语调
-2. 清楚地说明当前情况
-3. 提供具体的选项或建议
-4. 尊重用户的偏好和决定
-5. 及时响应用户的反馈
+Interaction principles:
+1. Maintain friendly and professional tone
+2. Clearly explain current situation
+3. Provide specific options or suggestions
+4. Respect user preferences and decisions
+5. Respond promptly to user feedback
 
-请以适当的方式与用户交互。"""
+Please interact with user appropriately."""
 
     def get_quality_check_prompt(self, content: str, criteria: List[str]) -> str:
-        """获取质量检查提示"""
+        """Get quality check prompt"""
         criteria_text = "\n".join([f"- {criterion}" for criterion in criteria])
         
-        return f"""请对以下内容进行质量检查：
+        return f"""Please conduct quality check on the following content:
 
-内容：
+Content:
 {content[:300]}...
 
-检查标准：
+Check criteria:
 {criteria_text}
 
-检查流程：
-1. 逐项评估内容是否符合标准
-2. 识别需要改进的方面
-3. 提供具体的改进建议
-4. 评估整体质量分数（1-10分）
-5. 决定是否需要重新生成或优化
+Check workflow:
+1. Evaluate content against each criterion
+2. Identify areas needing improvement
+3. Provide specific improvement suggestions
+4. Assess overall quality score (1-10 points)
+5. Decide if regeneration or optimization is needed
 
-请提供详细的质量评估报告。"""
+Please provide detailed quality assessment report."""
 
 
-# 创建全局提示模板实例
+# Create global prompt template instance
 newsletter_prompts = NewsletterAgentPrompts()
 
 
 def get_agent_prompt_templates() -> Dict[str, str]:
-    """获取所有代理提示模板"""
+    """Get all agent prompt templates"""
     if not LANGCHAIN_AVAILABLE:
-        logger.warning("LangChain不可用，返回基础提示模板")
+        logger.warning("LangChain not available, returning basic prompt templates")
         return {}
     
     templates = {
         "system": newsletter_prompts.get_system_prompt(),
         "task_planning": newsletter_prompts.get_task_planning_prompt(),
-        "research": "请对主题'{topic}'进行{depth}研究",
-        "newsletter_generation": "生成关于'{topic}'的{style}风格简报",
-        "content_analysis": "分析以下内容: {content}",
-        "trending_analysis": "分析{category}领域的热门话题",
-        "error_handling": "处理{error_type}错误: {context}",
-        "user_interaction": "进行{interaction_type}类型的用户交互",
-        "quality_check": "检查内容质量: {content}"
+        "research": "Please conduct {depth} research on topic '{topic}'",
+        "newsletter_generation": "Generate {style} style newsletter about '{topic}'",
+        "content_analysis": "Analyze the following content: {content}",
+        "trending_analysis": "Analyze trending topics in {category} field",
+        "error_handling": "Handle {error_type} error: {context}",
+        "user_interaction": "Conduct {interaction_type} type user interaction",
+        "quality_check": "Check content quality: {content}"
     }
     
     return templates
 
 
 def create_chat_prompt_template(template_name: str, **kwargs) -> Optional[str]:
-    """创建聊天提示模板"""
+    """Create chat prompt template"""
     if not LANGCHAIN_AVAILABLE:
         return None
     
@@ -276,18 +276,18 @@ def create_chat_prompt_template(template_name: str, **kwargs) -> Optional[str]:
     template = templates.get(template_name)
     
     if not template:
-        logger.warning(f"未找到模板: {template_name}")
+        logger.warning(f"Template not found: {template_name}")
         return None
     
     try:
         return template.format(**kwargs)
     except KeyError as e:
-        logger.error(f"模板参数缺失: {e}")
+        logger.error(f"Template parameter missing: {e}")
         return None
 
 
 def get_dynamic_prompt(task_type: str, context: Dict[str, Any]) -> str:
-    """根据任务类型和上下文动态生成提示"""
+    """Generate dynamic prompt based on task type and context"""
     
     base_prompts = {
         "research": newsletter_prompts.get_research_prompt(

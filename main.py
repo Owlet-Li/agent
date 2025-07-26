@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Newsletter Agent - 主入口文件
-智能新闻简报生成代理
+Newsletter Agent - Main Entry Point
+Intelligent Newsletter Generation Agent
 """
 
 import sys
@@ -15,26 +15,26 @@ except ImportError:
     import logging
     logger = logging.getLogger(__name__)
 
-# 添加项目根目录到Python路径
+# Add project root directory to Python path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-# 导入配置
+# Import configuration
 try:
     from newsletter_agent.config.settings import settings
 except ImportError:
-    logger.error("配置模块导入失败，请确保已安装所有依赖项")
+    logger.error("Configuration module import failed, please ensure all dependencies are installed")
     sys.exit(1)
 
 
 def setup_logging():
-    """设置日志系统"""
-    # 检查是否使用loguru
+    """Setup logging system"""
+    # Check if using loguru
     if hasattr(logger, 'remove'):
-        # 使用loguru
-        logger.remove()  # 移除默认handler
+        # Using loguru
+        logger.remove()  # Remove default handler
         
-        # 控制台日志
+        # Console logging
         logger.add(
             sys.stdout,
             format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
@@ -44,7 +44,7 @@ def setup_logging():
             level="DEBUG" if settings.DEBUG else "INFO"
         )
         
-        # 文件日志
+        # File logging
         log_file = settings.LOGS_DIR / "newsletter_agent.log"
         logger.add(
             log_file,
@@ -55,7 +55,7 @@ def setup_logging():
             encoding="utf-8"
         )
     else:
-        # 使用标准logging
+        # Using standard logging
         logging.basicConfig(
             level=logging.DEBUG if settings.DEBUG else logging.INFO,
             format='%(asctime)s | %(levelname)-8s | %(name)s:%(funcName)s:%(lineno)d - %(message)s',
@@ -67,42 +67,42 @@ def setup_logging():
 
 
 def check_environment():
-    """检查环境配置 - 分级检查策略"""
-    logger.info("检查环境配置...")
+    """Check environment configuration - Tiered checking strategy"""
+    logger.info("Checking environment configuration...")
     
-    # 数据源相关的密钥 (核心功能)
+    # Data source related keys (core functionality)
     data_source_keys = ["NEWSAPI_KEY"]
-    # AI功能相关的密钥 (可选功能)  
+    # AI functionality related keys (optional features)  
     ai_keys = ["OPENAI_API_KEY"]
     
     missing_data_keys = []
     missing_ai_keys = []
     
-    # 检查数据源密钥
+    # Check data source keys
     for key in data_source_keys:
         value = getattr(settings, key, None)
         if not value or value.strip() == "":
             missing_data_keys.append(key)
     
-    # 检查AI功能密钥
+    # Check AI functionality keys
     for key in ai_keys:
         value = getattr(settings, key, None)
         if not value or value.strip() == "":
             missing_ai_keys.append(key)
     
-    # 报告检查结果
+    # Report check results
     if missing_data_keys:
-        logger.error(f"❌ 缺少核心数据源密钥: {', '.join(missing_data_keys)}")
-        logger.info("💡 这些密钥是必需的，请检查.env文件配置")
+        logger.error(f"❌ Missing core data source keys: {', '.join(missing_data_keys)}")
+        logger.info("💡 These keys are required, please check .env file configuration")
         return False
     
     if missing_ai_keys:
-        logger.warning(f"⚠️  缺少AI功能密钥: {', '.join(missing_ai_keys)}")
-        logger.info("💡 AI功能将不可用，但数据源功能仍可正常使用")
+        logger.warning(f"⚠️  Missing AI functionality keys: {', '.join(missing_ai_keys)}")
+        logger.info("💡 AI features will be unavailable, but data source functionality will still work normally")
     else:
-        logger.info("✅ AI功能密钥配置完整")
+        logger.info("✅ AI functionality keys configuration complete")
     
-    # 验证数据源状态
+    # Verify data source status
     try:
         from newsletter_agent.src.data_sources import data_aggregator
         status = data_aggregator.get_data_sources_status()
@@ -111,60 +111,60 @@ def check_environment():
         unavailable_sources = [name for name, available in status.items() if not available]
         
         if available_sources:
-            logger.info(f"✅ 可用数据源: {', '.join(available_sources)}")
+            logger.info(f"✅ Available data sources: {', '.join(available_sources)}")
         
         if unavailable_sources:
-            logger.warning(f"⚠️  不可用数据源: {', '.join(unavailable_sources)}")
+            logger.warning(f"⚠️  Unavailable data sources: {', '.join(unavailable_sources)}")
             
         if not available_sources:
-            logger.error("❌ 没有可用的数据源！")
+            logger.error("❌ No available data sources!")
             return False
             
     except Exception as e:
-        logger.warning(f"⚠️  数据源状态检查失败: {e}")
+        logger.warning(f"⚠️  Data source status check failed: {e}")
     
-    logger.info("✅ 环境配置检查完成，应用可以启动")
+    logger.info("✅ Environment configuration check complete, application can start")
     return True
 
 
 def main():
-    """主函数"""
-    # 设置日志
+    """Main function"""
+    # Setup logging
     setup_logging()
     
-    logger.info(f"🚀 启动 {settings.APP_NAME} v{settings.APP_VERSION}")
+    logger.info(f"🚀 Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     
-    # 检查环境
+    # Check environment
     if not check_environment():
-        logger.error("💥 环境检查失败，无法启动应用")
+        logger.error("💥 Environment check failed, cannot start application")
         sys.exit(1)
     
     try:
-        # 导入并启动UI
+        # Import and start UI
         from newsletter_agent.src.ui.app import create_app
         
-        logger.info("🎨 正在启动用户界面...")
+        logger.info("🎨 Starting user interface...")
         app = create_app()
         
-        # 启动Gradio应用
-        logger.info("🌐 启动Web服务器 - http://localhost:7860")
+        # Start Gradio application
+        logger.info("🌐 Starting web server - http://localhost:7860")
         app.launch(
             server_name="127.0.0.1",
             server_port=7860,
-            share=True,  # 创建公共链接以解决代理问题
+            share=True,  # Create public link to solve proxy issues
             debug=settings.DEBUG
         )
         
     except ImportError as e:
-        logger.error(f"💥 模块导入失败: {e}")
-        logger.info("💡 请运行: pip install -r requirements.txt")
+        logger.error(f"💥 Module import failed: {e}")
+        logger.info("💡 Please run: pip install -r requirements.txt")
         sys.exit(1)
     except KeyboardInterrupt:
-        logger.info("👋 用户中断，正在退出...")
+        logger.info("👋 User interrupted, exiting...")
     except Exception as e:
-        logger.error(f"💥 应用启动失败: {e}")
+        logger.error(f"💥 Application startup failed: {e}")
         import traceback
-        logger.debug(f"详细错误信息:\n{traceback.format_exc()}")
+        logger.debug(f"Detailed error information:\n{traceback.format_exc()}")
         sys.exit(1)
 
 

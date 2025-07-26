@@ -82,7 +82,7 @@ class NewsletterAgent:
                 return None
             
             llm = ChatOpenAI(
-                model="gpt-3.5-turbo",
+                model="gpt-4.1",
                 openai_api_key=api_key,
                 openai_api_base=api_base,
                 temperature=0.7,

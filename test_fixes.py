@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Newsletter Agent - 修复验证测试
-验证系统修复是否成功
+Newsletter Agent - Fix Verification Tests
+Verify if system fixes are successful
 """
 
 import os
@@ -10,35 +10,35 @@ import sys
 from pathlib import Path
 
 def test_imports():
-    """测试模块导入"""
-    print("🔍 测试模块导入...")
+    """Test module imports"""
+    print("🔍 Testing module imports...")
     
     try:
         # 测试基础模块导入
         from newsletter_agent.config.settings import settings
-        print("  ✅ 配置模块导入成功")
+        print("  ✅ Config module imported successfully")
         
         from newsletter_agent.src.agents import get_global_agent, get_agent_status
-        print("  ✅ 代理模块导入成功")
+        print("  ✅ Agent module imported successfully")
         
         from newsletter_agent.src.tools.ai_generation_tools import get_ai_tools
-        print("  ✅ AI工具模块导入成功")
+        print("  ✅ AI tools module imported successfully")
         
         from newsletter_agent.src.tools.data_source_tools import get_all_tools
-        print("  ✅ 数据源工具模块导入成功")
+        print("  ✅ Data source tools module imported successfully")
         
         from newsletter_agent.src.ui.app import create_app
-        print("  ✅ UI模块导入成功")
+        print("  ✅ UI module imported successfully")
         
         return True
         
     except Exception as e:
-        print(f"  ❌ 模块导入失败: {e}")
+        print(f"  ❌ Module import failed: {e}")
         return False
 
 def test_tools():
-    """测试工具初始化"""
-    print("\n🔧 测试工具初始化...")
+    """Test tools initialization"""
+    print("\n🔧 Testing tools initialization...")
     
     try:
         from newsletter_agent.src.tools.ai_generation_tools import get_ai_tools
@@ -47,8 +47,8 @@ def test_tools():
         ai_tools = get_ai_tools()
         data_tools = get_all_tools()
         
-        print(f"  ✅ AI工具: {len(ai_tools)} 个")
-        print(f"  ✅ 数据源工具: {len(data_tools)} 个")
+        print(f"  ✅ AI tools: {len(ai_tools)} available")
+        print(f"  ✅ Data source tools: {len(data_tools)} available")
         
         # 测试工具名称
         for tool in ai_tools:
@@ -60,12 +60,12 @@ def test_tools():
         return True
         
     except Exception as e:
-        print(f"  ❌ 工具初始化失败: {e}")
+        print(f"  ❌ Tools initialization failed: {e}")
         return False
 
 def test_agent():
-    """测试代理创建"""
-    print("\n🤖 测试代理创建...")
+    """Test agent creation"""
+    print("\n🤖 Testing agent creation...")
     
     try:
         from newsletter_agent.src.agents import create_newsletter_agent
@@ -74,45 +74,45 @@ def test_agent():
         agent = create_newsletter_agent()
         status = agent.get_agent_status()
         
-        print(f"  ✅ 代理创建成功")
-        print(f"  📊 代理状态: {'就绪' if status.get('is_ready') else '未就绪'}")
-        print(f"  🔧 工具数量: {status.get('tools_count', 0)}")
-        print(f"  🧠 LLM可用: {'是' if status.get('llm_available') else '否'}")
+        print(f"  ✅ Agent created successfully")
+        print(f"  📊 Agent status: {'Ready' if status.get('is_ready') else 'Not ready'}")
+        print(f"  🔧 Tools count: {status.get('tools_count', 0)}")
+        print(f"  🧠 LLM available: {'Yes' if status.get('llm_available') else 'No'}")
         
         return True
         
     except Exception as e:
-        print(f"  ❌ 代理创建失败: {e}")
+        print(f"  ❌ Agent creation failed: {e}")
         return False
 
 def test_ui():
-    """测试UI创建"""
-    print("\n🎨 测试UI创建...")
+    """Test UI creation"""
+    print("\n🎨 Testing UI creation...")
     
     try:
         from newsletter_agent.src.ui.app import create_app
         
         app = create_app()
         
-        print("  ✅ UI创建成功")
-        print("  📱 Gradio应用已准备就绪")
+        print("  ✅ UI created successfully")
+        print("  📱 Gradio app is ready")
         
         return True
         
     except Exception as e:
-        print(f"  ❌ UI创建失败: {e}")
+        print(f"  ❌ UI creation failed: {e}")
         return False
 
 def main():
-    """主测试函数"""
-    print("🧪 Newsletter Agent 修复验证测试")
+    """Main test function"""
+    print("🧪 Newsletter Agent Fix Verification Tests")
     print("=" * 50)
     
     tests = [
-        ("模块导入", test_imports),
-        ("工具初始化", test_tools),
-        ("代理创建", test_agent),
-        ("UI创建", test_ui)
+        ("Module imports", test_imports),
+        ("Tools initialization", test_tools),
+        ("Agent creation", test_agent),
+        ("UI creation", test_ui)
     ]
     
     passed = 0
@@ -122,26 +122,26 @@ def main():
         try:
             if test_func():
                 passed += 1
-                print(f"\n✅ {test_name} 测试通过")
+                print(f"\n✅ {test_name} test passed")
             else:
-                print(f"\n❌ {test_name} 测试失败")
+                print(f"\n❌ {test_name} test failed")
         except Exception as e:
-            print(f"\n💥 {test_name} 测试异常: {e}")
+            print(f"\n💥 {test_name} test exception: {e}")
     
     print("\n" + "=" * 50)
-    print(f"📊 测试结果: {passed}/{total} 通过")
+    print(f"📊 Test results: {passed}/{total} passed")
     
     if passed == total:
-        print("🎉 所有测试通过！系统修复成功！")
-        print("\n下一步：")
-        print("1. 配置 .env 文件中的API密钥")
-        print("2. 运行 python main.py 启动应用")
-        print("3. 访问 http://localhost:7860 使用系统")
+        print("🎉 All tests passed! System fixes successful!")
+        print("\nNext steps:")
+        print("1. Configure API keys in .env file")
+        print("2. Run python main.py to start the application")
+        print("3. Access http://localhost:7860 to use the system")
     else:
-        print("⚠️  部分测试失败，请检查错误信息")
+        print("⚠️  Some tests failed, please check error messages")
     
     return passed == total
 
 if __name__ == "__main__":
     success = main()
-    sys.exit(0 if success else 1) 
+    sys.exit(0 if success else 1)
